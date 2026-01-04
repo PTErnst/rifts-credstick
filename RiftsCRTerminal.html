@@ -250,219 +250,234 @@
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw1A4rkqq8NQ-18J0Gvh_GV2BxrZuLM3Lqy3udjPj2s6NbqekqkSFfS4zbcNCnDawX2/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw1A4rkqq8NQ-18J0Gvh_GV2BxrZuLM3Lqy3udjPj2s6NbqekqkSFfS4zbcNCnDawX2/exec';
+    
+    let currentAccount = null;
+    let recipientTag = null;
+    let isScanning = false;
+
+    // Update date/time
+    function updateDateTime() {
+        const now = new Date();
+        document.getElementById('dateTime').textContent = now.toLocaleString();
+    }
+    setInterval(updateDateTime, 1000);
+    updateDateTime();
+
+    // Check if browser supports NFC
+    if ('NDEFReader' in window) {
+        startNFCScanning();
+    } else {
+        document.getElementById('scanPrompt').innerHTML = 
+            'NFC NOT SUPPORTED ON THIS DEVICE<br><br>' +
+            '<small>For testing, you can manually enter Tag ID:</small><br>' +
+            '<input type="text" id="manualTagId" placeholder="Enter Tag ID"><br>' +
+            '<button class="button" onclick="manualLogin()">LOGIN</button>';
+    }
+
+    async function startNFCScanning() {
+        try {
+            const ndef = new NDEFReader();
+            await ndef.scan();
+            
+            ndef.addEventListener("reading", ({ serialNumber }) => {
+                const tagId = serialNumber;
+                console.log("NFC tag detected:", tagId);
+                
+                if (!currentAccount) {
+                    login(tagId);
+                } else if (isScanning) {
+                    setRecipient(tagId);
+                }
+            });
+
+            console.log("NFC scanning started");
+        } catch (error) {
+            console.error("NFC Error:", error);
+            showError("NFC scanning failed: " + error.message);
+        }
+    }
+
+    function manualLogin() {
+        const tagId = document.getElementById('manualTagId').value;
+        if (tagId) {
+            login(tagId);
+        }
+    }
+
+    // JSONP callback functions
+    window.handleBalanceResponse = function(data) {
+        if (data.error) {
+            showError(data.error);
+            return;
+        }
+        currentAccount = data;
+        displayAccount(data);
+    };
+
+    window.handleTransferResponse = function(data) {
+        if (data.error) {
+            showError(data.error);
+            return;
+        }
         
-        let currentAccount = null;
-        let recipientTag = null;
-        let isScanning = false;
+        // Update balance
+        document.getElementById('balance').textContent = data.newBalance.toLocaleString();
+        currentAccount.balance = data.newBalance;
+        
+        showMessage("TRANSFER COMPLETE: " + data.message, true);
+        
+        // Reset form
+        setTimeout(() => {
+            hideTransferForm();
+        }, 2000);
+    };
 
-        // Update date/time
-        function updateDateTime() {
-            const now = new Date();
-            document.getElementById('dateTime').textContent = now.toLocaleString();
+    window.handleRecipientResponse = function(data) {
+        isScanning = false;
+        
+        if (data.error) {
+            showError(data.error);
+            return;
         }
-        setInterval(updateDateTime, 1000);
-        updateDateTime();
+        
+        recipientTag = data.tagId;
+        document.getElementById('recipientInfo').classList.remove('hidden');
+        document.getElementById('recipientName').textContent = data.characterName;
+        
+        showMessage("RECIPIENT CONFIRMED - READY TO TRANSFER", false);
+        
+        // Auto-execute transfer if amount is entered
+        const amount = document.getElementById('transferAmount').value;
+        if (amount && amount > 0) {
+            executeTransfer();
+        }
+    };
 
-        // Check if browser supports NFC
-        if ('NDEFReader' in window) {
-            startNFCScanning();
+    function makeJSONPRequest(url, callback) {
+        const script = document.createElement('script');
+        const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+        
+        window[callbackName] = function(data) {
+            delete window[callbackName];
+            document.body.removeChild(script);
+            callback(data);
+        };
+        
+        script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + callbackName;
+        document.body.appendChild(script);
+    }
+
+    function login(tagId) {
+        try {
+            showMessage("AUTHENTICATING...", false);
+            
+            const url = `${SCRIPT_URL}?action=getBalance&tagId=${encodeURIComponent(tagId)}`;
+            makeJSONPRequest(url, handleBalanceResponse);
+            
+        } catch (error) {
+            showError("Connection failed: " + error.message);
+        }
+    }
+
+    function displayAccount(data) {
+        document.getElementById('scanPrompt').style.display = 'none';
+        document.getElementById('accountDisplay').style.display = 'block';
+        
+        document.getElementById('characterName').textContent = data.characterName;
+        document.getElementById('tagId').textContent = data.tagId;
+        document.getElementById('balance').textContent = data.balance.toLocaleString();
+        
+        const statusElement = document.getElementById('accountStatus');
+        statusElement.textContent = data.status;
+        statusElement.className = 'status-' + data.status.toLowerCase();
+        
+        if (data.notes && data.notes.trim()) {
+            document.getElementById('notes').classList.remove('hidden');
+            document.getElementById('notesText').textContent = data.notes;
         } else {
-            document.getElementById('scanPrompt').innerHTML = 
-                'NFC NOT SUPPORTED ON THIS DEVICE<br><br>' +
-                '<small>For testing, you can manually enter Tag ID:</small><br>' +
-                '<input type="text" id="manualTagId" placeholder="Enter Tag ID"><br>' +
-                '<button class="button" onclick="manualLogin()">LOGIN</button>';
+            document.getElementById('notes').classList.add('hidden');
         }
+        
+        clearMessage();
+    }
 
-        async function startNFCScanning() {
-            try {
-                const ndef = new NDEFReader();
-                await ndef.scan();
-                
-                ndef.addEventListener("reading", ({ serialNumber }) => {
-                    const tagId = serialNumber;
-                    console.log("NFC tag detected:", tagId);
-                    
-                    if (!currentAccount) {
-                        login(tagId);
-                    } else if (isScanning) {
-                        setRecipient(tagId);
-                    }
-                });
+    function showTransferForm() {
+        document.getElementById('transferForm').style.display = 'block';
+    }
 
-                console.log("NFC scanning started");
-            } catch (error) {
-                console.error("NFC Error:", error);
-                showError("NFC scanning failed: " + error.message);
-            }
+    function hideTransferForm() {
+        document.getElementById('transferForm').style.display = 'none';
+        document.getElementById('recipientInfo').classList.add('hidden');
+        document.getElementById('transferAmount').value = '';
+        recipientTag = null;
+        isScanning = false;
+    }
+
+    function scanRecipient() {
+        isScanning = true;
+        showMessage("TAP RECIPIENT CREDSTICK NOW...", false);
+    }
+
+    function setRecipient(tagId) {
+        const url = `${SCRIPT_URL}?action=getBalance&tagId=${encodeURIComponent(tagId)}`;
+        makeJSONPRequest(url, handleRecipientResponse);
+    }
+
+    function executeTransfer() {
+        const amount = document.getElementById('transferAmount').value;
+        
+        if (!amount || amount <= 0) {
+            showError("Invalid transfer amount");
+            return;
         }
-
-        function manualLogin() {
-            const tagId = document.getElementById('manualTagId').value;
-            if (tagId) {
-                login(tagId);
-            }
+        
+        if (!recipientTag) {
+            showError("No recipient selected");
+            return;
         }
-
-        async function login(tagId) {
-            try {
-                showMessage("AUTHENTICATING...", false);
-                
-                const response = await fetch(`${SCRIPT_URL}?action=getBalance&tagId=${encodeURIComponent(tagId)}`);
-                const data = await response.json();
-                
-                if (data.error) {
-                    showError(data.error);
-                    return;
-                }
-
-                currentAccount = data;
-                displayAccount(data);
-                
-            } catch (error) {
-                showError("Connection failed: " + error.message);
-            }
-        }
-
-        function displayAccount(data) {
-            document.getElementById('scanPrompt').style.display = 'none';
-            document.getElementById('accountDisplay').style.display = 'block';
+        
+        try {
+            showMessage("PROCESSING TRANSFER...", false);
             
-            document.getElementById('characterName').textContent = data.characterName;
-            document.getElementById('tagId').textContent = data.tagId;
-            document.getElementById('balance').textContent = data.balance.toLocaleString();
+            const url = `${SCRIPT_URL}?action=transfer&fromTag=${encodeURIComponent(currentAccount.tagId)}&toTag=${encodeURIComponent(recipientTag)}&amount=${amount}`;
+            makeJSONPRequest(url, handleTransferResponse);
             
-            const statusElement = document.getElementById('accountStatus');
-            statusElement.textContent = data.status;
-            statusElement.className = 'status-' + data.status.toLowerCase();
-            
-            if (data.notes && data.notes.trim()) {
-                document.getElementById('notes').classList.remove('hidden');
-                document.getElementById('notesText').textContent = data.notes;
-            } else {
-                document.getElementById('notes').classList.add('hidden');
-            }
-            
-            clearMessage();
+        } catch (error) {
+            showError("Transfer failed: " + error.message);
         }
+    }
 
-        function showTransferForm() {
-            document.getElementById('transferForm').style.display = 'block';
-        }
+    function logout() {
+        currentAccount = null;
+        recipientTag = null;
+        isScanning = false;
+        
+        document.getElementById('scanPrompt').style.display = 'block';
+        document.getElementById('accountDisplay').style.display = 'none';
+        document.getElementById('transferForm').style.display = 'none';
+        
+        clearMessage();
+    }
 
-        function hideTransferForm() {
-            document.getElementById('transferForm').style.display = 'none';
-            document.getElementById('recipientInfo').classList.add('hidden');
-            document.getElementById('transferAmount').value = '';
-            recipientTag = null;
-            isScanning = false;
-        }
+    function showMessage(msg, isSuccess) {
+        const messageDiv = document.getElementById('message');
+        messageDiv.className = isSuccess ? 'success' : 'prompt';
+        messageDiv.textContent = msg;
+    }
 
-        function scanRecipient() {
-            isScanning = true;
-            showMessage("TAP RECIPIENT CREDSTICK NOW...", false);
-        }
+    function showError(msg) {
+        const messageDiv = document.getElementById('message');
+        messageDiv.className = 'error';
+        messageDiv.textContent = "ERROR: " + msg;
+    }
 
-        async function setRecipient(tagId) {
-            isScanning = false;
-            
-            try {
-                const response = await fetch(`${SCRIPT_URL}?action=getBalance&tagId=${encodeURIComponent(tagId)}`);
-                const data = await response.json();
-                
-                if (data.error) {
-                    showError(data.error);
-                    return;
-                }
-                
-                recipientTag = tagId;
-                document.getElementById('recipientInfo').classList.remove('hidden');
-                document.getElementById('recipientName').textContent = data.characterName;
-                
-                showMessage("RECIPIENT CONFIRMED - READY TO TRANSFER", false);
-                
-                // Auto-execute transfer if amount is entered
-                const amount = document.getElementById('transferAmount').value;
-                if (amount && amount > 0) {
-                    executeTransfer();
-                }
-                
-            } catch (error) {
-                showError("Failed to verify recipient: " + error.message);
-            }
-        }
-
-        async function executeTransfer() {
-            const amount = document.getElementById('transferAmount').value;
-            
-            if (!amount || amount <= 0) {
-                showError("Invalid transfer amount");
-                return;
-            }
-            
-            if (!recipientTag) {
-                showError("No recipient selected");
-                return;
-            }
-            
-            try {
-                showMessage("PROCESSING TRANSFER...", false);
-                
-                const url = `${SCRIPT_URL}?action=transfer&fromTag=${encodeURIComponent(currentAccount.tagId)}&toTag=${encodeURIComponent(recipientTag)}&amount=${amount}`;
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                if (data.error) {
-                    showError(data.error);
-                    return;
-                }
-                
-                // Update balance
-                document.getElementById('balance').textContent = data.newBalance.toLocaleString();
-                currentAccount.balance = data.newBalance;
-                
-                showMessage("TRANSFER COMPLETE: " + data.message, true);
-                
-                // Reset form
-                setTimeout(() => {
-                    hideTransferForm();
-                }, 2000);
-                
-            } catch (error) {
-                showError("Transfer failed: " + error.message);
-            }
-        }
-
-        function logout() {
-            currentAccount = null;
-            recipientTag = null;
-            isScanning = false;
-            
-            document.getElementById('scanPrompt').style.display = 'block';
-            document.getElementById('accountDisplay').style.display = 'none';
-            document.getElementById('transferForm').style.display = 'none';
-            
-            clearMessage();
-        }
-
-        function showMessage(msg, isSuccess) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.className = isSuccess ? 'success' : 'prompt';
-            messageDiv.textContent = msg;
-        }
-
-        function showError(msg) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.className = 'error';
-            messageDiv.textContent = "ERROR: " + msg;
-        }
-
-        function clearMessage() {
-            document.getElementById('message').textContent = '';
-            document.getElementById('message').className = '';
-        }
-    </script>
+    function clearMessage() {
+        document.getElementById('message').textContent = '';
+        document.getElementById('message').className = '';
+    }
+</script>
 </body>
 
 </html>
+
