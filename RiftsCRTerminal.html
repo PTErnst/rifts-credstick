@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coalition States Credit Terminal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .terminal-header {
+            border: 2px solid #00ff00;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            background: rgba(0, 255, 0, 0.05);
+        }
+
+        .cs-logo {
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+        }
+
+        .terminal-title {
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+
+        .terminal-body {
+            border: 2px solid #00ff00;
+            padding: 20px;
+            flex-grow: 1;
+            background: rgba(0, 255, 0, 0.02);
+        }
+
+        .status-line {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #00ff00;
+        }
+
+        .prompt {
+            color: #00ff00;
+            margin: 10px 0;
+        }
+
+        .prompt::before {
+            content: "> ";
+        }
+
+        #scanPrompt {
+            text-align: center;
+            font-size: 18px;
+            padding: 40px 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .account-display {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .account-info {
+            margin: 15px 0;
+            padding: 10px;
+            border-left: 3px solid #00ff00;
+            padding-left: 15px;
+        }
+
+        .balance {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        .button {
+            background: transparent;
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 12px 24px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: all 0.3s;
+            letter-spacing: 1px;
+        }
+
+        .button:hover {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .button:active {
+            transform: scale(0.95);
+        }
+
+        .transfer-form {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #00ff00;
+        }
+
+        input {
+            background: #000;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        .error {
+            color: #ff0000;
+            border-color: #ff0000;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #ff0000;
+            padding-left: 15px;
+        }
+
+        .success {
+            color: #00ff00;
+            border-left: 3px solid #00ff00;
+            padding: 10px;
+            margin: 10px 0;
+            padding-left: 15px;
+        }
+
+        .status-active {
+            color: #00ff00;
+        }
+
+        .status-frozen {
+            color: #ff0000;
+        }
+
+        .status-flagged {
+            color: #ffaa00;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .button-group {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .balance {
+                font-size: 24px;
+            }
+            
+            .button {
+                display: block;
+                width: 100%;
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal-header">
+        <div class="cs-logo">⚡ COALITION STATES ⚡</div>
+        <div class="terminal-title">AUTHORIZED CREDIT TERMINAL - SECURE ACCESS ONLY</div>
+    </div>
+
+    <div class="terminal-body">
+        <div class="status-line">
+            <span id="systemStatus">SYSTEM STATUS: ONLINE</span> | 
+            <span id="dateTime"></span>
+        </div>
+
+        <div id="scanPrompt" class="prompt">
+            TAP CREDSTICK TO AUTHENTICATE
+        </div>
+
+        <div id="accountDisplay" class="account-display">
+            <div class="account-info">
+                <div>ACCOUNT HOLDER: <span id="characterName"></span></div>
+                <div>TAG ID: <span id="tagId"></span></div>
+                <div>STATUS: <span id="accountStatus"></span></div>
+            </div>
+
+            <div class="balance">
+                <span id="balance">0</span> CR
+            </div>
+
+            <div id="notes" class="account-info hidden">
+                <strong>NOTES:</strong> <span id="notesText"></span>
+            </div>
+
+            <div class="button-group">
+                <button class="button" onclick="showTransferForm()">TRANSFER CREDITS</button>
+                <button class="button" onclick="logout()">LOGOUT</button>
+            </div>
+
+            <div id="transferForm" class="transfer-form">
+                <div class="prompt">ENTER TRANSFER AMOUNT</div>
+                <input type="number" id="transferAmount" placeholder="Amount in CR" min="1">
+                
+                <div class="prompt">TAP RECIPIENT CREDSTICK</div>
+                <button class="button" onclick="scanRecipient()">SCAN RECIPIENT</button>
+                <button class="button" onclick="hideTransferForm()">CANCEL</button>
+                
+                <div id="recipientInfo" class="hidden account-info">
+                    Recipient: <span id="recipientName"></span>
+                </div>
+            </div>
+
+            <div id="message"></div>
+        </div>
+    </div>
+
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwoxVo-eLf7AQd6s9L8EhjFbxV25YxKVi5BiIDFIxptH5bIOfgT1j8UqCnD036ArK9a/exec';
+        
+        let currentAccount = null;
+        let recipientTag = null;
+        let isScanning = false;
+
+        // Update date/time
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('dateTime').textContent = now.toLocaleString();
+        }
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
+
+        // Check if browser supports NFC
+        if ('NDEFReader' in window) {
+            startNFCScanning();
+        } else {
+            document.getElementById('scanPrompt').innerHTML = 
+                'NFC NOT SUPPORTED ON THIS DEVICE<br><br>' +
+                '<small>For testing, you can manually enter Tag ID:</small><br>' +
+                '<input type="text" id="manualTagId" placeholder="Enter Tag ID"><br>' +
+                '<button class="button" onclick="manualLogin()">LOGIN</button>';
+        }
+
+        async function startNFCScanning() {
+            try {
+                const ndef = new NDEFReader();
+                await ndef.scan();
+                
+                ndef.addEventListener("reading", ({ serialNumber }) => {
+                    const tagId = serialNumber;
+                    console.log("NFC tag detected:", tagId);
+                    
+                    if (!currentAccount) {
+                        login(tagId);
+                    } else if (isScanning) {
+                        setRecipient(tagId);
+                    }
+                });
+
+                console.log("NFC scanning started");
+            } catch (error) {
+                console.error("NFC Error:", error);
+                showError("NFC scanning failed: " + error.message);
+            }
+        }
+
+        function manualLogin() {
+            const tagId = document.getElementById('manualTagId').value;
+            if (tagId) {
+                login(tagId);
+            }
+        }
+
+        async function login(tagId) {
+            try {
+                showMessage("AUTHENTICATING...", false);
+                
+                const response = await fetch(`${SCRIPT_URL}?action=getBalance&tagId=${encodeURIComponent(tagId)}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+
+                currentAccount = data;
+                displayAccount(data);
+                
+            } catch (error) {
+                showError("Connection failed: " + error.message);
+            }
+        }
+
+        function displayAccount(data) {
+            document.getElementById('scanPrompt').style.display = 'none';
+            document.getElementById('accountDisplay').style.display = 'block';
+            
+            document.getElementById('characterName').textContent = data.characterName;
+            document.getElementById('tagId').textContent = data.tagId;
+            document.getElementById('balance').textContent = data.balance.toLocaleString();
+            
+            const statusElement = document.getElementById('accountStatus');
+            statusElement.textContent = data.status;
+            statusElement.className = 'status-' + data.status.toLowerCase();
+            
+            if (data.notes && data.notes.trim()) {
+                document.getElementById('notes').classList.remove('hidden');
+                document.getElementById('notesText').textContent = data.notes;
+            } else {
+                document.getElementById('notes').classList.add('hidden');
+            }
+            
+            clearMessage();
+        }
+
+        function showTransferForm() {
+            document.getElementById('transferForm').style.display = 'block';
+        }
+
+        function hideTransferForm() {
+            document.getElementById('transferForm').style.display = 'none';
+            document.getElementById('recipientInfo').classList.add('hidden');
+            document.getElementById('transferAmount').value = '';
+            recipientTag = null;
+            isScanning = false;
+        }
+
+        function scanRecipient() {
+            isScanning = true;
+            showMessage("TAP RECIPIENT CREDSTICK NOW...", false);
+        }
+
+        async function setRecipient(tagId) {
+            isScanning = false;
+            
+            try {
+                const response = await fetch(`${SCRIPT_URL}?action=getBalance&tagId=${encodeURIComponent(tagId)}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+                
+                recipientTag = tagId;
+                document.getElementById('recipientInfo').classList.remove('hidden');
+                document.getElementById('recipientName').textContent = data.characterName;
+                
+                showMessage("RECIPIENT CONFIRMED - READY TO TRANSFER", false);
+                
+                // Auto-execute transfer if amount is entered
+                const amount = document.getElementById('transferAmount').value;
+                if (amount && amount > 0) {
+                    executeTransfer();
+                }
+                
+            } catch (error) {
+                showError("Failed to verify recipient: " + error.message);
+            }
+        }
+
+        async function executeTransfer() {
+            const amount = document.getElementById('transferAmount').value;
+            
+            if (!amount || amount <= 0) {
+                showError("Invalid transfer amount");
+                return;
+            }
+            
+            if (!recipientTag) {
+                showError("No recipient selected");
+                return;
+            }
+            
+            try {
+                showMessage("PROCESSING TRANSFER...", false);
+                
+                const url = `${SCRIPT_URL}?action=transfer&fromTag=${encodeURIComponent(currentAccount.tagId)}&toTag=${encodeURIComponent(recipientTag)}&amount=${amount}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+                
+                // Update balance
+                document.getElementById('balance').textContent = data.newBalance.toLocaleString();
+                currentAccount.balance = data.newBalance;
+                
+                showMessage("TRANSFER COMPLETE: " + data.message, true);
+                
+                // Reset form
+                setTimeout(() => {
+                    hideTransferForm();
+                }, 2000);
+                
+            } catch (error) {
+                showError("Transfer failed: " + error.message);
+            }
+        }
+
+        function logout() {
+            currentAccount = null;
+            recipientTag = null;
+            isScanning = false;
+            
+            document.getElementById('scanPrompt').style.display = 'block';
+            document.getElementById('accountDisplay').style.display = 'none';
+            document.getElementById('transferForm').style.display = 'none';
+            
+            clearMessage();
+        }
+
+        function showMessage(msg, isSuccess) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.className = isSuccess ? 'success' : 'prompt';
+            messageDiv.textContent = msg;
+        }
+
+        function showError(msg) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.className = 'error';
+            messageDiv.textContent = "ERROR: " + msg;
+        }
+
+        function clearMessage() {
+            document.getElementById('message').textContent = '';
+            document.getElementById('message').className = '';
+        }
+    </script>
+</body>
+</html>
