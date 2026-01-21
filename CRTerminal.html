@@ -262,7 +262,7 @@
         </div>
     </div>
 
-    <!-- Supabase JS Client -->
+<!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
@@ -270,9 +270,19 @@
         const SUPABASE_URL = 'https://pxlqmzraudmyvgrpfser.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_KFRvomIxHG-n6Y0QxpU6yQ_YEkwiYb6';
         
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
+        let supabase;
         let currentAccount = null;
+
+        // Initialize Supabase when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log('Supabase initialized successfully');
+            } catch (error) {
+                console.error('Failed to initialize Supabase:', error);
+                showError('System initialization failed. Please refresh the page.');
+            }
+        });
 
         // Update date/time
         function updateDateTime() {
@@ -317,8 +327,14 @@
         }
 
         async function login(tagId) {
+            if (!supabase) {
+                showError("System not ready. Please wait a moment and try again.");
+                return;
+            }
+
             try {
                 showMessage("AUTHENTICATING...", false);
+                console.log('Attempting login with tag:', tagId);
                 
                 // Query Supabase for credstick
                 const { data, error } = await supabase
@@ -327,9 +343,11 @@
                     .eq('tag_id', tagId)
                     .single();
                 
+                console.log('Supabase response:', { data, error });
+                
                 if (error) {
                     console.error('Supabase error:', error);
-                    showError("Credstick not found");
+                    showError("Credstick not found: " + error.message);
                     return;
                 }
 
@@ -347,6 +365,7 @@
                     notes: data.notes
                 };
                 
+                console.log('Login successful:', currentAccount);
                 displayAccount(currentAccount);
                 
             } catch (error) {
@@ -392,6 +411,11 @@
         }
 
         async function executeTransfer() {
+            if (!supabase) {
+                showError("System not ready.");
+                return;
+            }
+
             const amount = parseFloat(document.getElementById('transferAmount').value);
             const recipientTagId = document.getElementById('recipientTagId').value.trim();
             
@@ -472,7 +496,6 @@
                 
                 if (logError) {
                     console.error('Transaction log error:', logError);
-                    // Don't fail the transfer if logging fails
                 }
                 
                 // Update display
@@ -519,5 +542,9 @@
             document.getElementById('message').className = '';
         }
     </script>
+</body>
+</html>
+
+    
 </body>
 </html>
