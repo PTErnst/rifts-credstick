@@ -268,12 +268,12 @@
 const SUPABASE_URL = 'https://pxlqmzraudmyvgrpfser.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_KFRvomIxHG-n6Y0QxpU6yQ_YEkwiYb6';
 
-let supabase;
+let supabaseClient;
 let currentAccount = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     try {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         console.log('Supabase initialized successfully');
     } catch (error) {
         console.error('Failed to initialize Supabase:', error);
@@ -318,7 +318,7 @@ function manualLogin() {
 }
 
 async function login(tagId) {
-    if (!supabase) {
+    if (!supabaseClient) {
         showError("System not ready. Please wait a moment and try again.");
         return;
     }
@@ -327,7 +327,7 @@ async function login(tagId) {
         showMessage("AUTHENTICATING...", false);
         console.log('Attempting login with tag:', tagId);
         
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('credsticks')
             .select('*')
             .eq('tag_id', tagId)
@@ -401,7 +401,7 @@ function hideTransferForm() {
 }
 
 async function executeTransfer() {
-    if (!supabase) {
+    if (!supabaseClient) {
         showError("System not ready.");
         return;
     }
@@ -432,7 +432,7 @@ async function executeTransfer() {
     try {
         showMessage("PROCESSING TRANSFER...", false);
         
-        const { data: recipient, error: recipientError } = await supabase
+        const { data: recipient, error: recipientError } = await supabaseClient
             .from('credsticks')
             .select('*')
             .eq('tag_id', recipientTagId)
@@ -444,7 +444,7 @@ async function executeTransfer() {
         }
         
         const newSenderBalance = currentAccount.balance - amount;
-        const { error: senderError } = await supabase
+        const { error: senderError } = await supabaseClient
             .from('credsticks')
             .update({ 
                 balance: newSenderBalance,
@@ -458,7 +458,7 @@ async function executeTransfer() {
         }
         
         const newRecipientBalance = recipient.balance + amount;
-        const { error: recipientUpdateError } = await supabase
+        const { error: recipientUpdateError } = await supabaseClient
             .from('credsticks')
             .update({ 
                 balance: newRecipientBalance,
@@ -471,7 +471,7 @@ async function executeTransfer() {
             throw new Error('Failed to update recipient balance');
         }
         
-        const { error: logError } = await supabase
+        const { error: logError } = await supabaseClient
             .from('transaction_log')
             .insert({
                 from_character: currentAccount.characterName,
