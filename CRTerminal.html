@@ -264,283 +264,266 @@
 
 <!-- Supabase JS Client -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-        // ===== SUPABASE CONFIGURATION =====
-        const SUPABASE_URL = 'https://pxlqmzraudmyvgrpfser.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_KFRvomIxHG-n6Y0QxpU6yQ_YEkwiYb6';
-        
-        let supabase;
-        let currentAccount = null;
+<script>
+const SUPABASE_URL = 'https://pxlqmzraudmyvgrpfser.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_KFRvomIxHG-n6Y0QxpU6yQ_YEkwiYb6';
 
-        // Initialize Supabase when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            try {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                console.log('Supabase initialized successfully');
-            } catch (error) {
-                console.error('Failed to initialize Supabase:', error);
-                showError('System initialization failed. Please refresh the page.');
+let supabase;
+let currentAccount = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log('Supabase initialized successfully');
+    } catch (error) {
+        console.error('Failed to initialize Supabase:', error);
+    }
+});
+
+function updateDateTime() {
+    const now = new Date();
+    document.getElementById('dateTime').textContent = now.toLocaleString();
+}
+setInterval(updateDateTime, 1000);
+updateDateTime();
+
+if ('NDEFReader' in window) {
+    startNFCScanning();
+}
+
+async function startNFCScanning() {
+    try {
+        const ndef = new NDEFReader();
+        await ndef.scan();
+        ndef.addEventListener("reading", ({ serialNumber }) => {
+            const tagId = serialNumber;
+            console.log("NFC tag detected:", tagId);
+            if (!currentAccount) {
+                login(tagId);
             }
         });
+        console.log("NFC scanning started");
+    } catch (error) {
+        console.error("NFC Error:", error);
+    }
+}
 
-        // Update date/time
-        function updateDateTime() {
-            const now = new Date();
-            document.getElementById('dateTime').textContent = now.toLocaleString();
-        }
-        setInterval(updateDateTime, 1000);
-        updateDateTime();
+function manualLogin() {
+    const tagId = document.getElementById('manualTagId').value.trim();
+    if (tagId) {
+        login(tagId);
+    } else {
+        showError("Please enter a Tag ID");
+    }
+}
 
-        // Check if browser supports NFC
-        if ('NDEFReader' in window) {
-            startNFCScanning();
-        }
+async function login(tagId) {
+    if (!supabase) {
+        showError("System not ready. Please wait a moment and try again.");
+        return;
+    }
 
-        async function startNFCScanning() {
-            try {
-                const ndef = new NDEFReader();
-                await ndef.scan();
-                
-                ndef.addEventListener("reading", ({ serialNumber }) => {
-                    const tagId = serialNumber;
-                    console.log("NFC tag detected:", tagId);
-                    
-                    if (!currentAccount) {
-                        login(tagId);
-                    }
-                });
-
-                console.log("NFC scanning started");
-            } catch (error) {
-                console.error("NFC Error:", error);
-            }
-        }
-
-        function manualLogin() {
-            const tagId = document.getElementById('manualTagId').value.trim();
-            if (tagId) {
-                login(tagId);
-            } else {
-                showError("Please enter a Tag ID");
-            }
+    try {
+        showMessage("AUTHENTICATING...", false);
+        console.log('Attempting login with tag:', tagId);
+        
+        const { data, error } = await supabase
+            .from('credsticks')
+            .select('*')
+            .eq('tag_id', tagId)
+            .single();
+        
+        console.log('Supabase response:', { data, error });
+        
+        if (error) {
+            console.error('Supabase error:', error);
+            showError("Credstick not found: " + error.message);
+            return;
         }
 
-        async function login(tagId) {
-            if (!supabase) {
-                showError("System not ready. Please wait a moment and try again.");
-                return;
-            }
-
-            try {
-                showMessage("AUTHENTICATING...", false);
-                console.log('Attempting login with tag:', tagId);
-                
-                // Query Supabase for credstick
-                const { data, error } = await supabase
-                    .from('credsticks')
-                    .select('*')
-                    .eq('tag_id', tagId)
-                    .single();
-                
-                console.log('Supabase response:', { data, error });
-                
-                if (error) {
-                    console.error('Supabase error:', error);
-                    showError("Credstick not found: " + error.message);
-                    return;
-                }
-
-                if (!data) {
-                    showError("Credstick not found");
-                    return;
-                }
-
-                currentAccount = {
-                    id: data.id,
-                    tagId: data.tag_id,
-                    characterName: data.character_name,
-                    balance: data.balance,
-                    status: data.status,
-                    notes: data.notes
-                };
-                
-                console.log('Login successful:', currentAccount);
-                displayAccount(currentAccount);
-                
-            } catch (error) {
-                console.error('Login error:', error);
-                showError("Connection failed: " + error.message);
-            }
+        if (!data) {
+            showError("Credstick not found");
+            return;
         }
 
-        function displayAccount(data) {
-            document.getElementById('scanPrompt').style.display = 'none';
-            document.getElementById('accountDisplay').style.display = 'block';
-            
-            document.getElementById('characterName').textContent = data.characterName;
-            document.getElementById('tagId').textContent = data.tagId;
-            document.getElementById('balance').textContent = data.balance.toLocaleString();
-            
-            const statusElement = document.getElementById('accountStatus');
-            statusElement.textContent = data.status;
-            statusElement.className = 'status-' + data.status.toLowerCase();
-            
-            if (data.notes && data.notes.trim()) {
-                document.getElementById('notes').classList.remove('hidden');
-                document.getElementById('notesText').textContent = data.notes;
-            } else {
-                document.getElementById('notes').classList.add('hidden');
-            }
-            
-            clearMessage();
+        currentAccount = {
+            id: data.id,
+            tagId: data.tag_id,
+            characterName: data.character_name,
+            balance: data.balance,
+            status: data.status,
+            notes: data.notes
+        };
+        
+        console.log('Login successful:', currentAccount);
+        displayAccount(currentAccount);
+        
+    } catch (error) {
+        console.error('Login error:', error);
+        showError("Connection failed: " + error.message);
+    }
+}
+
+function displayAccount(data) {
+    document.getElementById('scanPrompt').style.display = 'none';
+    document.getElementById('accountDisplay').style.display = 'block';
+    
+    document.getElementById('characterName').textContent = data.characterName;
+    document.getElementById('tagId').textContent = data.tagId;
+    document.getElementById('balance').textContent = data.balance.toLocaleString();
+    
+    const statusElement = document.getElementById('accountStatus');
+    statusElement.textContent = data.status;
+    statusElement.className = 'status-' + data.status.toLowerCase();
+    
+    if (data.notes && data.notes.trim()) {
+        document.getElementById('notes').classList.remove('hidden');
+        document.getElementById('notesText').textContent = data.notes;
+    } else {
+        document.getElementById('notes').classList.add('hidden');
+    }
+    
+    clearMessage();
+}
+
+function showTransferForm() {
+    if (currentAccount.status !== 'ACTIVE') {
+        showError("Account status is " + currentAccount.status + " - transfers disabled");
+        return;
+    }
+    document.getElementById('transferForm').style.display = 'block';
+}
+
+function hideTransferForm() {
+    document.getElementById('transferForm').style.display = 'none';
+    document.getElementById('recipientTagId').value = '';
+    document.getElementById('transferAmount').value = '';
+}
+
+async function executeTransfer() {
+    if (!supabase) {
+        showError("System not ready.");
+        return;
+    }
+
+    const amount = parseFloat(document.getElementById('transferAmount').value);
+    const recipientTagId = document.getElementById('recipientTagId').value.trim();
+    
+    if (!amount || amount <= 0) {
+        showError("Invalid transfer amount");
+        return;
+    }
+    
+    if (!recipientTagId) {
+        showError("Please enter recipient Tag ID");
+        return;
+    }
+    
+    if (recipientTagId === currentAccount.tagId) {
+        showError("Cannot transfer to yourself");
+        return;
+    }
+    
+    if (amount > currentAccount.balance) {
+        showError("Insufficient credits");
+        return;
+    }
+    
+    try {
+        showMessage("PROCESSING TRANSFER...", false);
+        
+        const { data: recipient, error: recipientError } = await supabase
+            .from('credsticks')
+            .select('*')
+            .eq('tag_id', recipientTagId)
+            .single();
+        
+        if (recipientError || !recipient) {
+            showError("Recipient credstick not found");
+            return;
         }
-
-        function showTransferForm() {
-            if (currentAccount.status !== 'ACTIVE') {
-                showError("Account status is " + currentAccount.status + " - transfers disabled");
-                return;
-            }
-            document.getElementById('transferForm').style.display = 'block';
+        
+        const newSenderBalance = currentAccount.balance - amount;
+        const { error: senderError } = await supabase
+            .from('credsticks')
+            .update({ 
+                balance: newSenderBalance,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', currentAccount.id);
+        
+        if (senderError) {
+            console.error('Sender update error:', senderError);
+            throw new Error('Failed to update sender balance');
         }
-
-        function hideTransferForm() {
-            document.getElementById('transferForm').style.display = 'none';
-            document.getElementById('recipientTagId').value = '';
-            document.getElementById('transferAmount').value = '';
+        
+        const newRecipientBalance = recipient.balance + amount;
+        const { error: recipientUpdateError } = await supabase
+            .from('credsticks')
+            .update({ 
+                balance: newRecipientBalance,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', recipient.id);
+        
+        if (recipientUpdateError) {
+            console.error('Recipient update error:', recipientUpdateError);
+            throw new Error('Failed to update recipient balance');
         }
-
-        async function executeTransfer() {
-            if (!supabase) {
-                showError("System not ready.");
-                return;
-            }
-
-            const amount = parseFloat(document.getElementById('transferAmount').value);
-            const recipientTagId = document.getElementById('recipientTagId').value.trim();
-            
-            if (!amount || amount <= 0) {
-                showError("Invalid transfer amount");
-                return;
-            }
-            
-            if (!recipientTagId) {
-                showError("Please enter recipient Tag ID");
-                return;
-            }
-            
-            if (recipientTagId === currentAccount.tagId) {
-                showError("Cannot transfer to yourself");
-                return;
-            }
-            
-            if (amount > currentAccount.balance) {
-                showError("Insufficient credits");
-                return;
-            }
-            
-            try {
-                showMessage("PROCESSING TRANSFER...", false);
-                
-                // Get recipient account
-                const { data: recipient, error: recipientError } = await supabase
-                    .from('credsticks')
-                    .select('*')
-                    .eq('tag_id', recipientTagId)
-                    .single();
-                
-                if (recipientError || !recipient) {
-                    showError("Recipient credstick not found");
-                    return;
-                }
-                
-                // Update sender balance
-                const newSenderBalance = currentAccount.balance - amount;
-                const { error: senderError } = await supabase
-                    .from('credsticks')
-                    .update({ 
-                        balance: newSenderBalance,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', currentAccount.id);
-                
-                if (senderError) {
-                    console.error('Sender update error:', senderError);
-                    throw new Error('Failed to update sender balance');
-                }
-                
-                // Update recipient balance
-                const newRecipientBalance = recipient.balance + amount;
-                const { error: recipientUpdateError } = await supabase
-                    .from('credsticks')
-                    .update({ 
-                        balance: newRecipientBalance,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', recipient.id);
-                
-                if (recipientUpdateError) {
-                    console.error('Recipient update error:', recipientUpdateError);
-                    throw new Error('Failed to update recipient balance');
-                }
-                
-                // Log transaction
-                const { error: logError } = await supabase
-                    .from('transaction_log')
-                    .insert({
-                        from_character: currentAccount.characterName,
-                        to_character: recipient.character_name,
-                        amount: amount,
-                        transaction_type: 'TRANSFER'
-                    });
-                
-                if (logError) {
-                    console.error('Transaction log error:', logError);
-                }
-                
-                // Update display
-                currentAccount.balance = newSenderBalance;
-                document.getElementById('balance').textContent = newSenderBalance.toLocaleString();
-                
-                showMessage(`TRANSFER COMPLETE: ${amount} CR sent to ${recipient.character_name}`, true);
-                
-                setTimeout(() => {
-                    hideTransferForm();
-                }, 2000);
-                
-            } catch (error) {
-                console.error('Transfer error:', error);
-                showError("Transfer failed: " + error.message);
-            }
+        
+        const { error: logError } = await supabase
+            .from('transaction_log')
+            .insert({
+                from_character: currentAccount.characterName,
+                to_character: recipient.character_name,
+                amount: amount,
+                transaction_type: 'TRANSFER'
+            });
+        
+        if (logError) {
+            console.error('Transaction log error:', logError);
         }
+        
+        currentAccount.balance = newSenderBalance;
+        document.getElementById('balance').textContent = newSenderBalance.toLocaleString();
+        
+        showMessage('TRANSFER COMPLETE: ' + amount + ' CR sent to ' + recipient.character_name, true);
+        
+        setTimeout(() => {
+            hideTransferForm();
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Transfer error:', error);
+        showError("Transfer failed: " + error.message);
+    }
+}
 
-        function logout() {
-            currentAccount = null;
-            
-            document.getElementById('scanPrompt').style.display = 'block';
-            document.getElementById('accountDisplay').style.display = 'none';
-            document.getElementById('transferForm').style.display = 'none';
-            document.getElementById('manualTagId').value = '';
-            
-            clearMessage();
-        }
+function logout() {
+    currentAccount = null;
+    document.getElementById('scanPrompt').style.display = 'block';
+    document.getElementById('accountDisplay').style.display = 'none';
+    document.getElementById('transferForm').style.display = 'none';
+    document.getElementById('manualTagId').value = '';
+    clearMessage();
+}
 
-        function showMessage(msg, isSuccess) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.className = isSuccess ? 'success' : 'prompt';
-            messageDiv.textContent = msg;
-        }
+function showMessage(msg, isSuccess) {
+    const messageDiv = document.getElementById('message');
+    messageDiv.className = isSuccess ? 'success' : 'prompt';
+    messageDiv.textContent = msg;
+}
 
-        function showError(msg) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.className = 'error';
-            messageDiv.textContent = "ERROR: " + msg;
-        }
+function showError(msg) {
+    const messageDiv = document.getElementById('message');
+    messageDiv.className = 'error';
+    messageDiv.textContent = "ERROR: " + msg;
+}
 
-        function clearMessage() {
-            document.getElementById('message').textContent = '';
-            document.getElementById('message').className = '';
-        }
-    </script>
-
+function clearMessage() {
+    document.getElementById('message').textContent = '';
+    document.getElementById('message').className = '';
+}
+</script>
 </body>
 </html>
