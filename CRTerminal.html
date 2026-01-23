@@ -224,6 +224,231 @@
         .hidden {
             display: none !important;
         }
+
+        /* MAIN MENU GRID */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 15px;
+            height: 100%;
+            padding: 10px;
+        }
+
+        .menu-btn {
+            background: rgba(0, 20, 0, 0.8);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+
+        .menu-btn:hover,
+        .menu-btn:active {
+            background: #00ff00;
+            color: #000;
+            box-shadow: 0 0 15px #00ff00;
+        }
+
+        .menu-btn .icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .menu-btn .label {
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        /* SCROLLABLE LISTS */
+        .scroll-list {
+            overflow-y: auto;
+            flex-grow: 1;
+            border: 1px solid #004400;
+            margin-bottom: 10px;
+            padding: 5px;
+        }
+
+        .list-item {
+            border-bottom: 1px solid #004400;
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        .list-item:hover {
+            background: rgba(0, 255, 0, 0.1);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #000;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #004400;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00ff00;
+        }
+
+        /* BOUNTY STYLES */
+        .bounty-item {
+            border: 1px solid #00ff00;
+            margin-bottom: 10px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .bounty-img {
+            width: 60px;
+            height: 60px;
+            background: #002200;
+            border: 1px solid #005500;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .bounty-info {
+            flex-grow: 1;
+        }
+
+        .bounty-name {
+            font-weight: bold;
+            font-size: 16px;
+            color: #ff0000;
+            letter-spacing: 1px;
+        }
+
+        .bounty-reward {
+            color: #00ff00;
+            font-size: 14px;
+        }
+
+        .bounty-details {
+            font-size: 12px;
+            color: #88ff88;
+        }
+
+        /* MISSION STYLES */
+        .mission-item {
+            border: 1px solid #00aaaa;
+            margin-bottom: 10px;
+            padding: 10px;
+        }
+
+        .mission-header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #005555;
+            padding-bottom: 5px;
+            margin-bottom: 5px;
+        }
+
+        .mission-title {
+            color: #00ffff;
+            font-weight: bold;
+        }
+
+        .mission-reward {
+            color: #ffff00;
+        }
+
+        .mission-desc {
+            font-size: 14px;
+            color: #ccc;
+            margin-bottom: 5px;
+        }
+
+        /* MARKET STYLES */
+        .market-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed #005500;
+            padding: 10px;
+        }
+
+        .market-name {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .market-stock {
+            color: #888;
+            font-size: 12px;
+        }
+
+        .market-price {
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        /* INTEL STYLES */
+        .intel-item {
+            border-left: 3px solid #00ff00;
+            padding-left: 10px;
+            margin-bottom: 15px;
+        }
+
+        .intel-date {
+            font-size: 10px;
+            color: #88ff88;
+            margin-bottom: 3px;
+        }
+
+        .intel-title {
+            font-weight: bold;
+            font-size: 14px;
+            color: #ccffcc;
+        }
+
+        .intel-body {
+            font-size: 12px;
+            color: #aaaaaa;
+            margin-top: 5px;
+        }
+
+        /* COMMS STYLES */
+        .comm-item {
+            background: rgba(0, 255, 0, 0.05);
+            border: 1px solid #003300;
+            padding: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+
+        .comm-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .comm-subject {
+            color: #eeffee;
+        }
+
+        .comm-encrypted {
+            color: #ff5555;
+        }
     </style>
 </head>
 
@@ -254,6 +479,47 @@
         </div>
     </div>
 
+    <!-- 
+      VIEW: MAIN MENU
+    -->
+    <div id="view-main-menu" class="page-view">
+        <div class="terminal-header">
+            <div class="cs-logo">MAIN TERMINAL</div>
+            <div class="terminal-title" id="menu-user-id">WELCOME</div>
+        </div>
+        <div class="content-body">
+            <div class="menu-grid">
+                <div class="menu-btn" onclick="showView('view-bounty')">
+                    <div class="icon">☠️</div>
+                    <div class="label">WANTED / BOUNTY</div>
+                </div>
+                <div class="menu-btn" onclick="showView('view-missions')">
+                    <div class="icon">📋</div>
+                    <div class="label">MISSIONS</div>
+                </div>
+                <div class="menu-btn" onclick="showView('view-market')">
+                    <div class="icon">⚖️</div>
+                    <div class="label">BLACK MARKET</div>
+                </div>
+                <div class="menu-btn" onclick="showView('view-intel')">
+                    <div class="icon">📡</div>
+                    <div class="label">INTEL / NEWS</div>
+                </div>
+                <div class="menu-btn" onclick="showView('view-comms')">
+                    <div class="icon">🔒</div>
+                    <div class="label">SECURE COMMS</div>
+                </div>
+                <div class="menu-btn" onclick="showView('view-dashboard')">
+                    <div class="icon">💳</div>
+                    <div class="label">ACCOUNT / WALLET</div>
+                </div>
+            </div>
+            <div class="nav-bar">
+                <button class="button logout-btn" onclick="logout()" style="width: 100%">LOGOUT SYSTEM</button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- 
       VIEW 2: DASHBOARD (Main Info) 
@@ -278,7 +544,7 @@
             </div>
 
             <div class="nav-bar">
-                <button class="button logout-btn" onclick="logout()">LOGOUT</button>
+                <button class="button" onclick="showView('view-main-menu')">BACK TO MENU</button>
                 <button class="button" onclick="showView('view-details')">DETAILS & TRANSFER ></button>
             </div>
         </div>
@@ -338,6 +604,83 @@
         </div>
     </div>
 
+    <!-- VIEW 5: BOUNTY BOARD -->
+    <div id="view-bounty" class="page-view">
+        <div class="terminal-header">
+            <div class="cs-logo">WANTED / BOUNTIES</div>
+        </div>
+        <div class="content-body">
+            <div class="scroll-list" id="list-bounty">
+                <!-- Content will be injected -->
+                <div style="padding:20px; text-align:center;">LOADING DATABASE...</div>
+            </div>
+            <div class="nav-bar">
+                <button class="button" onclick="showView('view-main-menu')">BACK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 6: MISSIONS -->
+    <div id="view-missions" class="page-view">
+        <div class="terminal-header">
+            <div class="cs-logo">MISSION ASSIGNMENTS</div>
+        </div>
+        <div class="content-body">
+            <div class="scroll-list" id="list-missions">
+                <!-- Content will be injected -->
+                <div style="padding:20px; text-align:center;">FETCHING ORDERS...</div>
+            </div>
+            <div class="nav-bar">
+                <button class="button" onclick="showView('view-main-menu')">BACK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 7: BLACK MARKET -->
+    <div id="view-market" class="page-view">
+        <div class="terminal-header">
+            <div class="cs-logo">TRADE NETWORK</div>
+        </div>
+        <div class="content-body">
+            <div class="scroll-list" id="list-market">
+                <div style="padding:20px; text-align:center;">CONNECTING TO DARKNET...</div>
+            </div>
+            <div class="nav-bar">
+                <button class="button" onclick="showView('view-main-menu')">BACK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 8: INTEL -->
+    <div id="view-intel" class="page-view">
+        <div class="terminal-header">
+            <div class="cs-logo">INTELLIGENCE REPORTS</div>
+        </div>
+        <div class="content-body">
+            <div class="scroll-list" id="list-intel">
+                <div style="padding:20px; text-align:center;">DECRYPTING FEED...</div>
+            </div>
+            <div class="nav-bar">
+                <button class="button" onclick="showView('view-main-menu')">BACK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 9: COMMS -->
+    <div id="view-comms" class="page-view">
+        <div class="terminal-header">
+            <div class="cs-logo">SECURE COMMS</div>
+        </div>
+        <div class="content-body">
+            <div class="scroll-list" id="list-comms">
+                <div style="padding:20px; text-align:center;">SCANNING FREQUENCIES...</div>
+            </div>
+            <div class="nav-bar">
+                <button class="button" onclick="showView('view-main-menu')">BACK</button>
+            </div>
+        </div>
+    </div>
+
     <!-- GLOBAL ERROR OVERLAY -->
     <div id="errorOverlay" class="hidden error" onclick="this.classList.add('hidden')"></div>
 
@@ -377,6 +720,144 @@
             document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active-view'));
             // Show target view
             document.getElementById(viewId).classList.add('active-view');
+
+            // View specific init
+            if (viewId === 'view-bounty') renderBounties();
+            if (viewId === 'view-missions') renderMissions();
+            if (viewId === 'view-market') renderMarket();
+            if (viewId === 'view-intel') renderIntel();
+            if (viewId === 'view-comms') renderComms();
+        }
+
+        // --- MOCK DATA ---
+        const MOCK_BOUNTIES = [
+            { id: 1, name: "THORN MALUS", type: "LEY LINE WALKER", reward: 50000, lastSeen: "OLD CHICAGO", status: "WANTED DEAD" },
+            { id: 2, name: "GRK'KA", type: "D-BEE (SIMVAN)", reward: 15000, lastSeen: "CS MISSOURI BORDER", status: "WANTED ALIVE" },
+            { id: 3, name: "SUBJECT 89", type: "ROGUE DOG BOY", reward: 25000, lastSeen: "SECTOR 4", status: "CAPTURE ONLY" },
+            { id: 4, name: "RED RAVEN", type: "MERCENARY", reward: 100000, lastSeen: "TOLKEEN RUINS", status: "WANTED DEAD" }
+        ];
+
+        const MOCK_MISSIONS = [
+            { id: 1, title: "PATROL SECTOR 7", desc: "Routine patrol of outer perimeter. Report any D-Bee activity.", reward: 2000, difficulty: "LOW" },
+            { id: 2, title: "ESCORT SUPPLY CONVOY", desc: "Protect munitions transport from Chi-Town to outpost.", reward: 5500, difficulty: "MED" },
+            { id: 3, title: "HUNT SPLUGORTH SLAVER", desc: "Elite contract. Eliminate slaver operation in Ohio valley.", reward: 15000, difficulty: "HIGH" }
+        ];
+
+        const MOCK_MARKET = [
+            { id: 1, name: "ENERGY CLIP (E-CLIP)", stock: 34, price: 5000 },
+            { id: 2, name: "WILK'S 320 LASER PISTOL", stock: 2, price: 18000 },
+            { id: 3, name: "MD ARMOR REPAIR KIT", stock: 8, price: 2500 },
+            { id: 4, name: "JUICER DRUG HARNESS", stock: 1, price: 45000, illegal: true }
+        ];
+
+        const MOCK_INTEL = [
+            { id: 1, title: "LEY LINE STORM WARNING", body: "High probability of ley line storms near St. Louis ruins. Air travel restricted.", date: "10:00" },
+            { id: 2, title: "CS MILITARY MOVEMENT", body: "Large division moving towards Tolkeen border. Threat level increased.", date: "09:45" },
+            { id: 3, title: "MAGIC USER SIGHTING", body: "Rogue practitioner spotted in Sector 4. Report immediately.", date: "08:30" }
+        ];
+
+        const MOCK_COMMS = [
+            { id: 1, sender: "UNKNOWN", subject: "DROP POINT CHANGED", date: "TODAY", encrypted: true },
+            { id: 2, sender: "MERCHANT", subject: "New shipment arrived", date: "YESTERDAY", encrypted: false },
+            { id: 3, sender: "COMMAND", subject: "Mission updates", date: "2 DAYS AGO", encrypted: false }
+        ];
+
+        // --- RENDER FUNCTIONS ---
+        function renderBounties() {
+            const container = document.getElementById('list-bounty');
+            // Simple check to see if already rendered (look for class)
+            if (container.querySelector('.bounty-item')) return;
+
+            let html = '';
+            MOCK_BOUNTIES.forEach(b => {
+                const color = b.status.includes('DEAD') ? '#ff4444' : (b.status.includes('CAPTURE') ? '#00ffff' : '#ffff00');
+                html += `
+                <div class="bounty-item">
+                    <div class="bounty-img">💀</div>
+                    <div class="bounty-info">
+                        <div class="bounty-name">${b.name}</div>
+                        <div class="bounty-details">TYPE: ${b.type} | LOC: ${b.lastSeen}</div>
+                        <div class="bounty-reward">REWARD: ${b.reward.toLocaleString()} CR</div>
+                    </div>
+                    <div style="color: ${color}; font-size:12px; font-weight:bold; width: 60px; text-align:right;">
+                        ${b.status.replace('WANTED ', '')}<br>
+                        ${color === '#ff4444' ? 'ONLY' : ''}
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderMissions() {
+            const container = document.getElementById('list-missions');
+            if (container.querySelector('.mission-item')) return;
+
+            let html = '';
+            MOCK_MISSIONS.forEach(m => {
+                html += `
+                 <div class="mission-item">
+                    <div class="mission-header">
+                        <span class="mission-title">${m.title}</span>
+                        <span class="mission-reward">${m.reward} CR</span>
+                    </div>
+                    <div class="mission-desc">${m.desc}</div>
+                    <div style="font-size:12px; color:#00aaaa;">DIFFICULTY: ${m.difficulty} | <span style="text-decoration:underline; cursor:pointer;">ACCEPT</span></div>
+                 </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderMarket() {
+            const container = document.getElementById('list-market');
+            if (container.querySelector('.market-item')) return;
+
+            let html = '';
+            MOCK_MARKET.forEach(m => {
+                html += `
+                 <div class="market-item">
+                    <div>
+                        <div class="market-name" style="${m.illegal ? 'color:#ff5555;' : ''}">${m.name} ${m.illegal ? '[ILLEGAL]' : ''}</div>
+                        <div class="market-stock">STOCK: ${m.stock}</div>
+                    </div>
+                    <div class="market-price">${m.price.toLocaleString()} CR</div>
+                 </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderIntel() {
+            const container = document.getElementById('list-intel');
+            if (container.querySelector('.intel-item')) return;
+
+            let html = '';
+            MOCK_INTEL.forEach(i => {
+                html += `
+                 <div class="intel-item">
+                    <div class="intel-date">${i.date}</div>
+                    <div class="intel-title">${i.title}</div>
+                    <div class="intel-body">${i.body}</div>
+                 </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderComms() {
+            const container = document.getElementById('list-comms');
+            if (container.querySelector('.comm-item')) return;
+
+            let html = '';
+            MOCK_COMMS.forEach(c => {
+                html += `
+                 <div class="comm-item">
+                    <div class="comm-header">
+                        <span>FROM: ${c.sender}</span>
+                        <span>${c.date}</span>
+                    </div>
+                    <div class="comm-subject">${c.subject}</div>
+                    ${c.encrypted ? '<div class="comm-encrypted">[ENCRYPTED MESSAGE - KEY REQUIRED]</div>' : ''}
+                 </div>`;
+            });
+            container.innerHTML = html;
         }
 
         // --- AUTHENTICATION ---
@@ -450,7 +931,9 @@
                 };
 
                 updateDashboard(currentAccount);
-                showView('view-dashboard');
+                // Redirect to MAIN MENU instead of direct Dashboard
+                document.getElementById('menu-user-id').textContent = "USER: " + currentAccount.characterName.toUpperCase();
+                showView('view-main-menu');
 
             } catch (error) {
                 showError("NET ERROR: " + error.message);
