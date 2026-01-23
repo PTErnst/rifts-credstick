@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>STORYTELLER ADMIN</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #ff0000;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        h1,
+        h2 {
+            text-transform: uppercase;
+            border-bottom: 2px solid #ff0000;
+            padding-bottom: 10px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .back-btn {
+            background: #330000;
+            color: #ff0000;
+            border: 1px solid #ff0000;
+            padding: 5px 15px;
+            cursor: pointer;
+        }
+
+        .back-btn:hover {
+            background: #550000;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #550000;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            opacity: 0.6;
+        }
+
+        .tab.active {
+            background: #220000;
+            border: 1px solid #ff0000;
+            border-bottom: 1px solid #000;
+            opacity: 1;
+            font-weight: bold;
+        }
+
+        .panel {
+            display: none;
+            height: 100%;
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        .panel.active {
+            display: flex;
+        }
+
+        .content-split {
+            display: flex;
+            gap: 20px;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .list-col {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #550000;
+            padding: 10px;
+        }
+
+        .form-col {
+            width: 350px;
+            border: 1px solid #550000;
+            padding: 10px;
+            background: #110000;
+            overflow-y: auto;
+        }
+
+        .item-card {
+            border: 1px solid #330000;
+            margin-bottom: 5px;
+            padding: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .item-card:hover {
+            background: #220000;
+        }
+
+        .del-btn {
+            color: #ff0000;
+            border: 1px solid #ff0000;
+            background: #000;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            background: #000;
+            color: #ff0000;
+            border: 1px solid #550000;
+            padding: 5px;
+            margin-bottom: 10px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 3px;
+            font-size: 12px;
+            color: #aa0000;
+        }
+
+        button.action-btn {
+            width: 100%;
+            background: #550000;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button.action-btn:hover {
+            background: #880000;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #110000;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #550000;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>STORYTELLER INTERFACE // LEVEL 5 CLEARANCE</h1>
+        <button class="back-btn" onclick="window.location.href='CRTerminal.html'">EXIT TO TERMINAL</button>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="showTab('bounties')">BOUNTIES</div>
+        <div class="tab" onclick="showTab('missions')">MISSIONS</div>
+        <div class="tab" onclick="showTab('market')">MARKET</div>
+        <div class="tab" onclick="showTab('intel')">INTEL</div>
+        <div class="tab" onclick="showTab('comms')">COMMS</div>
+    </div>
+
+    <!-- BOUNTIES -->
+    <div id="tab-bounties" class="panel active">
+        <div class="content-split">
+            <div class="list-col" id="list-bounties">LOADING...</div>
+            <div class="form-col">
+                <h3>ADD NEW BOUNTY</h3>
+                <label>NAME</label><input type="text" id="b-name">
+                <label>TYPE</label><input type="text" id="b-type">
+                <label>REWARD</label><input type="number" id="b-reward">
+                <label>LAST SEEN</label><input type="text" id="b-last">
+                <label>STATUS</label>
+                <select id="b-status">
+                    <option value="WANTED DEAD">WANTED DEAD</option>
+                    <option value="WANTED ALIVE">WANTED ALIVE</option>
+                    <option value="CAPTURE ONLY">CAPTURE ONLY</option>
+                </select>
+                <button class="action-btn" onclick="addBounty()">PUBLISH BOUNTY</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MISSIONS -->
+    <div id="tab-missions" class="panel">
+        <div class="content-split">
+            <div class="list-col" id="list-missions">LOADING...</div>
+            <div class="form-col">
+                <h3>ADD NEW MISSION</h3>
+                <label>TITLE</label><input type="text" id="m-title">
+                <label>REWARD</label><input type="number" id="m-reward">
+                <label>DIFFICULTY</label>
+                <select id="m-diff">
+                    <option value="LOW">LOW</option>
+                    <option value="MED">MED</option>
+                    <option value="HIGH">HIGH</option>
+                    <option value="CRITICAL">CRITICAL</option>
+                </select>
+                <label>DESCRIPTION</label><textarea id="m-desc" rows="4"></textarea>
+                <button class="action-btn" onclick="addMission()">POST MISSION</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MARKET -->
+    <div id="tab-market" class="panel">
+        <div class="content-split">
+            <div class="list-col" id="list-market">LOADING...</div>
+            <div class="form-col">
+                <h3>ADD ITEM listing</h3>
+                <label>ITEM NAME</label><input type="text" id="mk-name">
+                <label>PRICE</label><input type="number" id="mk-price">
+                <label>STOCK</label><input type="number" id="mk-stock">
+                <label>ILLEGAL?</label>
+                <select id="mk-illegal">
+                    <option value="false">NO (LEGAL)</option>
+                    <option value="true">YES (ILLEGAL)</option>
+                </select>
+                <button class="action-btn" onclick="addMarket()">LIST ITEM</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- INTEL -->
+    <div id="tab-intel" class="panel">
+        <div class="content-split">
+            <div class="list-col" id="list-intel">LOADING...</div>
+            <div class="form-col">
+                <h3>BROADCAST INTEL</h3>
+                <label>HEADLINE</label><input type="text" id="i-title">
+                <label>BODY</label><textarea id="i-body" rows="6"></textarea>
+                <button class="action-btn" onclick="addIntel()">BROADCAST</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMMS -->
+    <div id="tab-comms" class="panel">
+        <div class="content-split">
+            <div class="list-col" id="list-comms">LOADING...</div>
+            <div class="form-col">
+                <h3>SEND MESSAGE</h3>
+                <label>SENDER (From)</label><input type="text" id="c-sender">
+                <label>RECIPIENT (Tag ID)</label><input type="text" id="c-target">
+                <label>SUBJECT</label><input type="text" id="c-subject">
+                <label>MESSAGE (Use raw text)</label><textarea id="c-body" rows="4"></textarea>
+                <label>ENCRYPTED?</label>
+                <select id="c-enc">
+                    <option value="false">CLEAR TEXT</option>
+                    <option value="true">ENCRYPTED</option>
+                </select>
+                <button class="action-btn" onclick="addComms()">TRANSMIT</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://pxlqmzraudmyvgrpfser.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_KFRvomIxHG-n6Y0QxpU6yQ_YEkwiYb6';
+        let supabaseClient;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            loadAll();
+        });
+
+        function showTab(tabId) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            // Find trigger element logic omitted, simple event bubbling workaround
+            // Actually better to just select by text or pass "this"?
+            event.target.classList.add('active');
+        }
+
+        async function loadAll() {
+            fetchBounties();
+            fetchMissions();
+            fetchMarket();
+            fetchIntel();
+            fetchComms();
+        }
+
+        // --- BOUNTIES ---
+        async function fetchBounties() {
+            const { data, error } = await supabaseClient.from('bounties').select('*').order('created_at', { ascending: false });
+            renderList('list-bounties', data, 'bounties', row =>
+                `<b>${row.name}</b> [${row.status}] - ${row.reward} CR <span style="font-size:10px; color:#888;">${row.type}</span>`
+            );
+        }
+        async function addBounty() {
+            const payload = {
+                name: document.getElementById('b-name').value,
+                type: document.getElementById('b-type').value,
+                reward: document.getElementById('b-reward').value,
+                last_seen: document.getElementById('b-last').value,
+                status: document.getElementById('b-status').value
+            };
+            await supabaseClient.from('bounties').insert([payload]);
+            fetchBounties();
+            // clear inputs...
+        }
+
+        // --- MISSIONS ---
+        async function fetchMissions() {
+            const { data } = await supabaseClient.from('missions').select('*').order('created_at', { ascending: false });
+            renderList('list-missions', data, 'missions', row =>
+                `<b>${row.title}</b> [${row.difficulty}] - ${row.reward} CR<br>${row.description.substring(0, 50)}...`
+            );
+        }
+        async function addMission() {
+            const payload = {
+                title: document.getElementById('m-title').value,
+                reward: document.getElementById('m-reward').value,
+                difficulty: document.getElementById('m-diff').value,
+                description: document.getElementById('m-desc').value
+            };
+            await supabaseClient.from('missions').insert([payload]);
+            fetchMissions();
+        }
+
+        // --- MARKET ---
+        async function fetchMarket() {
+            const { data } = await supabaseClient.from('market_items').select('*').order('name');
+            renderList('list-market', data, 'market_items', row =>
+                `<b>${row.name}</b> - Stock: ${row.stock} | ${row.price} CR ${row.is_illegal ? '[ILLEGAL]' : ''}`
+            );
+        }
+        async function addMarket() {
+            const payload = {
+                name: document.getElementById('mk-name').value,
+                price: document.getElementById('mk-price').value,
+                stock: document.getElementById('mk-stock').value,
+                is_illegal: document.getElementById('mk-illegal').value === 'true'
+            };
+            await supabaseClient.from('market_items').insert([payload]);
+            fetchMarket();
+        }
+
+        // --- INTEL ---
+        async function fetchIntel() {
+            const { data } = await supabaseClient.from('intel_reports').select('*').order('created_at', { ascending: false });
+            renderList('list-intel', data, 'intel_reports', row =>
+                `<b>${new Date(row.created_at).toLocaleTimeString()}: ${row.title}</b><br>${row.body ? row.body.substring(0, 60) : ''}...`
+            );
+        }
+        async function addIntel() {
+            const payload = {
+                title: document.getElementById('i-title').value,
+                body: document.getElementById('i-body').value
+            };
+            await supabaseClient.from('intel_reports').insert([payload]);
+            fetchIntel();
+        }
+
+        // --- COMMS ---
+        async function fetchComms() {
+            const { data } = await supabaseClient.from('secure_messages').select('*').order('created_at', { ascending: false });
+            renderList('list-comms', data, 'secure_messages', row =>
+                `<b>TO: ${row.recipient_tag_id || 'ANY'} | FROM: ${row.sender}</b><br>${row.subject}`
+            );
+        }
+        async function addComms() {
+            const payload = {
+                sender: document.getElementById('c-sender').value,
+                recipient_tag_id: document.getElementById('c-target').value || null,
+                subject: document.getElementById('c-subject').value,
+                body: document.getElementById('c-body').value,
+                is_encrypted: document.getElementById('c-enc').value === 'true'
+            };
+            await supabaseClient.from('secure_messages').insert([payload]);
+            fetchComms();
+        }
+
+        // --- HELPER ---
+        function renderList(containerId, list, tableName, templateFn) {
+            const container = document.getElementById(containerId);
+            if (!list || list.length === 0) {
+                container.innerHTML = 'NO DATA';
+                return;
+            }
+            let html = '';
+            list.forEach(item => {
+                html += `<div class="item-card">
+                <div style="flex-grow:1;">${templateFn(item)}</div>
+                <button class="del-btn" onclick="deleteItem('${tableName}', ${item.id}, '${containerId}')">X</button>
+            </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        async function deleteItem(table, id, refreshId) {
+            if (!confirm('CONFIRM DELETION?')) return;
+            await supabaseClient.from(table).delete().eq('id', id);
+            // loose refresh map
+            if (table === 'bounties') fetchBounties();
+            if (table === 'missions') fetchMissions();
+            if (table === 'market_items') fetchMarket();
+            if (table === 'intel_reports') fetchIntel();
+            if (table === 'secure_messages') fetchComms();
+        }
+
+    </script>
+</body>
+
+</html>

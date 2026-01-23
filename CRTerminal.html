@@ -483,7 +483,7 @@
       VIEW: MAIN MENU
     -->
     <div id="view-main-menu" class="page-view">
-        <div class="terminal-header">
+        <div class="terminal-header" id="header-secret-link">
             <div class="cs-logo">MAIN TERMINAL</div>
             <div class="terminal-title" id="menu-user-id">WELCOME</div>
         </div>
@@ -741,6 +741,19 @@
             }
             updateDateTime();
             setInterval(updateDateTime, 1000);
+
+            // Blind Link listener
+            let clickCount = 0;
+            const header = document.getElementById('header-secret-link');
+            if (header) {
+                header.addEventListener('click', () => {
+                    clickCount++;
+                    if (clickCount >= 5) {
+                        window.location.href = 'StoryTeller.html';
+                    }
+                    setTimeout(() => clickCount = 0, 2000); // Reset if not clicked fast enough
+                });
+            }
         });
 
         function updateDateTime() {
@@ -759,48 +772,206 @@
             document.getElementById(viewId).classList.add('active-view');
 
             // View specific init
-            if (viewId === 'view-bounty') renderBounties();
-            if (viewId === 'view-missions') renderMissions();
-            if (viewId === 'view-market') renderMarket();
-            if (viewId === 'view-intel') renderIntel();
-            if (viewId === 'view-comms') renderComms();
+            if (viewId === 'view-bounty') fetchAndRenderBounties();
+            if (viewId === 'view-missions') fetchAndRenderMissions();
+            if (viewId === 'view-market') fetchAndRenderMarket();
+            if (viewId === 'view-intel') fetchAndRenderIntel();
+            if (viewId === 'view-comms') fetchAndRenderComms();
+        }
+
+        // --- DATA FETCHING & RENDERING ---
+
+        async function fetchAndRenderBounties() {
+            const container = document.getElementById('list-bounty');
+            container.innerHTML = '<div style="padding:20px; text-align:center;">ACCESSING BOUNTY DATABASE...</div>';
+
+            const { data, error } = await supabaseClient
+                .from('bounties')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                container.innerHTML = `<div style="color:red; text-align:center;">ERROR: ${error.message}</div>`;
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:#555;">NO ACTIVE BOUNTIES</div>';
+                return;
+            }
+
+            renderBounties(data);
+        }
+
+        function renderBounties(list) {
+            const container = document.getElementById('list-bounty');
+            let html = '';
+            list.forEach(b => {
+                const color = b.status.includes('DEAD') ? '#ff4444' : (b.status.includes('CAPTURE') ? '#00ffff' : '#ffff00');
+                html += `
+                <div class="bounty-item">
+                    <div class="bounty-img">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00ff00" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <circle cx="12" cy="12" r="6"></circle>
+                            <line x1="12" y1="2" x2="12" y2="22"></line>
+                            <line x1="2" y1="12" x2="22" y2="12"></line>
+                        </svg>
+                    </div>
+                    <div class="bounty-info">
+                        <div class="bounty-name">${b.name}</div>
+                        <div class="bounty-details">TYPE: ${b.type || 'UNKNOWN'} | LOC: ${b.last_seen || 'UNKNOWN'}</div>
+                        <div class="bounty-reward">REWARD: ${(b.reward || 0).toLocaleString()} CR</div>
+                    </div>
+                    <div style="color: ${color}; font-size:12px; font-weight:bold; width: 60px; text-align:right;">
+                        ${b.status.replace('WANTED ', '')}<br>
+                        ${color === '#ff4444' ? 'ONLY' : ''}
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        async function fetchAndRenderMissions() {
+            const container = document.getElementById('list-missions');
+            container.innerHTML = '<div style="padding:20px; text-align:center;">DECRYPTING MISSION FILES...</div>';
+
+            const { data, error } = await supabaseClient
+                .from('missions')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                container.innerHTML = `<div style="color:red; text-align:center;">ERROR: ${error.message}</div>`;
+                return;
+            }
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:#555;">NO ACTIVE CONTRACTS</div>';
+                return;
+            }
+            renderMissions(data);
+        }
+
+        function renderMissions(list) {
+            const container = document.getElementById('list-missions');
+            let html = '';
+            list.forEach(m => {
+                html += `
+                 <div class="mission-item">
+                    <div class="mission-header">
+                        <span class="mission-title">${m.title}</span>
+                        <span class="mission-reward">${(m.reward || 0).toLocaleString()} CR</span>
+                    </div>
+                    <div class="mission-desc">${m.description || ''}</div>
+                    <div style="font-size:12px; color:#00aaaa;">DIFFICULTY: ${m.difficulty || 'N/A'} | <span style="text-decoration:underline; cursor:pointer;">ACCEPT</span></div>
+                 </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+
+        async function fetchAndRenderMarket() {
+            const container = document.getElementById('list-market');
+            container.innerHTML = '<div style="padding:20px; text-align:center;">ESTABLISHING UPLINK...</div>';
+
+            const { data, error } = await supabaseClient.from('market_items').select('*').order('name');
+            if (error) {
+                container.innerHTML = `<div style="color:red; text-align:center;">CONNECTION ERROR</div>`;
+                return;
+            }
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:#555;">MARKET OFFLINE</div>';
+                return;
+            }
+            renderMarket(data);
+        }
+
+        function renderMarket(list) {
+            const container = document.getElementById('list-market');
+            let html = '';
+            list.forEach(m => {
+                html += `
+                 <div class="market-item">
+                    <div>
+                        <div class="market-name" style="${m.is_illegal ? 'color:#ff5555;' : ''}">${m.name} ${m.is_illegal ? '[ILLEGAL]' : ''}</div>
+                        <div class="market-stock">STOCK: ${m.stock}</div>
+                    </div>
+                    <div class="market-price">${(m.price || 0).toLocaleString()} CR</div>
+                 </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        async function fetchAndRenderIntel() {
+            const container = document.getElementById('list-intel');
+            container.innerHTML = '<div style="padding:20px; text-align:center;">DOWNLOADING PACKETS...</div>';
+
+            const { data, error } = await supabaseClient.from('intel_reports').select('*').order('created_at', { ascending: false });
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:#555;">NO NEW REPORTS</div>';
+                return;
+            }
+            renderIntel(data);
+        }
+
+        function renderIntel(list) {
+            const container = document.getElementById('list-intel');
+            let html = '';
+            list.forEach(i => {
+                const dateStr = new Date(i.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                html += `
+                 <div class="intel-item">
+                    <div class="intel-date">${dateStr}</div>
+                    <div class="intel-title">${i.title}</div>
+                    <div class="intel-body">${i.body || ''}</div>
+                 </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        async function fetchAndRenderComms() {
+            const container = document.getElementById('list-comms');
+            container.innerHTML = '<div style="padding:20px; text-align:center;">SCANNING...</div>';
+
+            // In a real app we'd filter by recipient_tag_id. For now show all or filter if user is logged in
+            let query = supabaseClient.from('secure_messages').select('*').order('created_at', { ascending: false });
+
+            // If we have a current user, maybe filter? For now, let's just show all for demo or filtered by 'public' if we had that.
+            // Let's just show all to verify functionality
+            const { data, error } = await query;
+
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:#555;">INBOX EMPTY</div>';
+                return;
+            }
+            renderComms(data);
+        }
+
+        function renderComms(list) {
+            const container = document.getElementById('list-comms');
+            let html = '';
+            list.forEach(c => {
+                const dateStr = new Date(c.created_at).toLocaleDateString();
+                html += `
+                 <div class="comm-item">
+                    <div class="comm-header">
+                        <span>FROM: ${c.sender}</span>
+                        <span>${dateStr}</span>
+                    </div>
+                    <div class="comm-subject">${c.subject}</div>
+                    ${c.is_encrypted ? '<div class="comm-encrypted">[ENCRYPTED MESSAGE - KEY REQUIRED]</div>' : ''}
+                 </div>`;
+            });
+            container.innerHTML = html;
         }
 
         // --- MOCK DATA ---
-        const MOCK_BOUNTIES = [
-            { id: 1, name: "THORN MALUS", type: "LEY LINE WALKER", reward: 50000, lastSeen: "OLD CHICAGO", status: "WANTED DEAD" },
-            { id: 2, name: "GRK'KA", type: "D-BEE (SIMVAN)", reward: 15000, lastSeen: "CS MISSOURI BORDER", status: "WANTED ALIVE" },
-            { id: 3, name: "SUBJECT 89", type: "ROGUE DOG BOY", reward: 25000, lastSeen: "SECTOR 4", status: "CAPTURE ONLY" },
-            { id: 4, name: "RED RAVEN", type: "MERCENARY", reward: 100000, lastSeen: "TOLKEEN RUINS", status: "WANTED DEAD" }
-        ];
 
-        const MOCK_MISSIONS = [
-            { id: 1, title: "PATROL SECTOR 7", desc: "Routine patrol of outer perimeter. Report any D-Bee activity.", reward: 2000, difficulty: "LOW" },
-            { id: 2, title: "ESCORT SUPPLY CONVOY", desc: "Protect munitions transport from Chi-Town to outpost.", reward: 5500, difficulty: "MED" },
-            { id: 3, title: "HUNT SPLUGORTH SLAVER", desc: "Elite contract. Eliminate slaver operation in Ohio valley.", reward: 15000, difficulty: "HIGH" }
-        ];
 
-        const MOCK_MARKET = [
-            { id: 1, name: "ENERGY CLIP (E-CLIP)", stock: 34, price: 5000 },
-            { id: 2, name: "WILK'S 320 LASER PISTOL", stock: 2, price: 18000 },
-            { id: 3, name: "MD ARMOR REPAIR KIT", stock: 8, price: 2500 },
-            { id: 4, name: "JUICER DRUG HARNESS", stock: 1, price: 45000, illegal: true }
-        ];
 
-        const MOCK_INTEL = [
-            { id: 1, title: "LEY LINE STORM WARNING", body: "High probability of ley line storms near St. Louis ruins. Air travel restricted.", date: "10:00" },
-            { id: 2, title: "CS MILITARY MOVEMENT", body: "Large division moving towards Tolkeen border. Threat level increased.", date: "09:45" },
-            { id: 3, title: "MAGIC USER SIGHTING", body: "Rogue practitioner spotted in Sector 4. Report immediately.", date: "08:30" }
-        ];
-
-        const MOCK_COMMS = [
-            { id: 1, sender: "UNKNOWN", subject: "DROP POINT CHANGED", date: "TODAY", encrypted: true },
-            { id: 2, sender: "MERCHANT", subject: "New shipment arrived", date: "YESTERDAY", encrypted: false },
-            { id: 3, sender: "COMMAND", subject: "Mission updates", date: "2 DAYS AGO", encrypted: false }
-        ];
 
         // --- RENDER FUNCTIONS ---
-        function renderBounties() {
+        function old_renderBounties() {
             const container = document.getElementById('list-bounty');
             // Simple check to see if already rendered (look for class)
             if (container.querySelector('.bounty-item')) return;
@@ -832,7 +1003,7 @@
             container.innerHTML = html;
         }
 
-        function renderMissions() {
+        function old_renderMissions() {
             const container = document.getElementById('list-missions');
             if (container.querySelector('.mission-item')) return;
 
@@ -851,7 +1022,7 @@
             container.innerHTML = html;
         }
 
-        function renderMarket() {
+        function old_renderMarket() {
             const container = document.getElementById('list-market');
             if (container.querySelector('.market-item')) return;
 
@@ -869,7 +1040,7 @@
             container.innerHTML = html;
         }
 
-        function renderIntel() {
+        function old_renderIntel() {
             const container = document.getElementById('list-intel');
             if (container.querySelector('.intel-item')) return;
 
@@ -885,7 +1056,7 @@
             container.innerHTML = html;
         }
 
-        function renderComms() {
+        function old_renderComms() {
             const container = document.getElementById('list-comms');
             if (container.querySelector('.comm-item')) return;
 
