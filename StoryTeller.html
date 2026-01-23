@@ -182,6 +182,8 @@
         <div class="tab" onclick="showTab('market')">MARKET</div>
         <div class="tab" onclick="showTab('intel')">INTEL</div>
         <div class="tab" onclick="showTab('comms')">COMMS</div>
+        <div class="tab" onclick="showTab('credsticks')">CREDSTICKS</div>
+        <div class="tab" onclick="showTab('logs')">LOGS</div>
     </div>
 
     <!-- BOUNTIES -->
@@ -278,6 +280,45 @@
         </div>
     </div>
 
+    <!-- CREDSTICKS -->
+    <div id="tab-credsticks" class="panel">
+        <div class="content-split">
+            <div class="list-col" id="list-credsticks">LOADING...</div>
+            <div class="form-col">
+                <h3>MANAGE CREDSTICK</h3>
+                <input type="hidden" id="cs-id">
+                <label>TAG ID (Unique)</label><input type="text" id="cs-tag">
+                <label>CHARACTER NAME</label><input type="text" id="cs-name">
+                <label>BALANCE</label><input type="number" id="cs-balance">
+                <label>STATUS</label>
+                <select id="cs-status">
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="FROZEN">FROZEN</option>
+                </select>
+                <label>NOTES</label><textarea id="cs-notes" rows="3"></textarea>
+                <div style="display:flex; gap:5px;">
+                    <button class="action-btn" onclick="saveCredstick()">SAVE / UPDATE</button>
+                    <button class="action-btn" style="background:#333;" onclick="clearCredstickForm()">CLEAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGS -->
+    <div id="tab-logs" class="panel">
+        <div class="content-split">
+            <div class="list-col" id="list-logs">LOADING...</div>
+            <div class="form-col">
+                <h3>INJECT LOG ENTRY</h3>
+                <label>FROM (Character)</label><input type="text" id="l-from">
+                <label>TO (Character)</label><input type="text" id="l-to">
+                <label>AMOUNT</label><input type="number" id="l-amount" value="0">
+                <label>TYPE</label><input type="text" id="l-type" value="ADMIN_ADJUST">
+                <button class="action-btn" onclick="addLog()">WRITE LOG</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const SUPABASE_URL = 'https://pxlqmzraudmyvgrpfser.supabase.co';
@@ -304,6 +345,8 @@
             fetchMarket();
             fetchIntel();
             fetchComms();
+            fetchCredsticks();
+            fetchLogs();
         }
 
         // --- BOUNTIES ---
@@ -395,6 +438,87 @@
             };
             await supabaseClient.from('secure_messages').insert([payload]);
             fetchComms();
+
+        }
+
+        // --- CREDSTICKS ---
+        async function fetchCredsticks() {
+            const { data } = await supabaseClient.from('credsticks').select('*').order('character_name');
+            const container = document.getElementById('list-credsticks');
+            if (!data || data.length === 0) {
+                container.innerHTML = 'NO DATA';
+                return;
+            }
+            let html = '';
+            data.forEach(item => {
+                // Escape quotes for the onclick handler
+                const json = JSON.stringify(item).replace(/"/g, '&quot;');
+                html += `<div class="item-card" onclick="populateCredstick('${json}')" style="cursor:pointer;">
+                <div style="flex-grow:1;">
+                    <b>${item.character_name}</b> (${item.balance} CR)<br>
+                    <span style="color:#888; font-size:10px;">ID: ${item.tag_id} | ${item.status}</span>
+                </div>
+                <button class="del-btn" onclick="event.stopPropagation(); deleteItem('credsticks', ${item.id}, 'list-credsticks')">X</button>
+            </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function populateCredstick(json) {
+            const data = JSON.parse(json);
+            document.getElementById('cs-id').value = data.id;
+            document.getElementById('cs-tag').value = data.tag_id;
+            document.getElementById('cs-name').value = data.character_name;
+            document.getElementById('cs-balance').value = data.balance;
+            document.getElementById('cs-status').value = data.status;
+            document.getElementById('cs-notes').value = data.notes || '';
+        }
+
+        function clearCredstickForm() {
+            document.getElementById('cs-id').value = '';
+            document.getElementById('cs-tag').value = '';
+            document.getElementById('cs-name').value = '';
+            document.getElementById('cs-balance').value = '';
+            document.getElementById('cs-notes').value = '';
+        }
+
+        async function saveCredstick() {
+            const id = document.getElementById('cs-id').value;
+            const payload = {
+                tag_id: document.getElementById('cs-tag').value,
+                character_name: document.getElementById('cs-name').value,
+                balance: parseInt(document.getElementById('cs-balance').value || 0),
+                status: document.getElementById('cs-status').value,
+                notes: document.getElementById('cs-notes').value
+            };
+
+            if (id) {
+                await supabaseClient.from('credsticks').update(payload).eq('id', id);
+            } else {
+                await supabaseClient.from('credsticks').insert([payload]);
+            }
+            fetchCredsticks();
+            clearCredstickForm();
+        }
+
+        // --- LOGS ---
+        async function fetchLogs() {
+            const { data } = await supabaseClient.from('transaction_log').select('*').order('created_at', { ascending: false }).limit(50);
+            renderList('list-logs', data, 'transaction_log', row =>
+                `<span style="color:#888;">${new Date(row.created_at).toLocaleString()}</span><br>
+                 <b>${row.transaction_type}</b>: ${row.from_character} -> ${row.to_character} (${row.amount} CR)`
+            );
+        }
+
+        async function addLog() {
+            const payload = {
+                from_character: document.getElementById('l-from').value,
+                to_character: document.getElementById('l-to').value,
+                amount: parseInt(document.getElementById('l-amount').value || 0),
+                transaction_type: document.getElementById('l-type').value
+            };
+            await supabaseClient.from('transaction_log').insert([payload]);
+            fetchLogs();
         }
 
         // --- HELPER ---
@@ -423,6 +547,8 @@
             if (table === 'market_items') fetchMarket();
             if (table === 'intel_reports') fetchIntel();
             if (table === 'secure_messages') fetchComms();
+            if (table === 'credsticks') fetchCredsticks();
+            if (table === 'transaction_log') fetchLogs();
         }
 
     </script>
