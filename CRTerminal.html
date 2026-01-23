@@ -269,39 +269,47 @@
         }
 
         /* SCROLLABLE LISTS */
+        /* SCROLLABLE LISTS (NOW PAGINATED) */
         .scroll-list {
-            overflow-y: auto;
+            overflow: hidden;
+            /* No scrolling */
             flex-grow: 1;
             border: 1px solid #004400;
-            margin-bottom: 10px;
+            margin-bottom: 2px;
             padding: 5px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
         }
 
-        .list-item {
-            border-bottom: 1px solid #004400;
-            padding: 10px;
+        .pagination-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px;
+            border: 1px solid #004400;
+            background: #001100;
+            font-size: 14px;
+        }
+
+        .page-btn {
+            background: #003300;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 2px 10px;
             cursor: pointer;
+            font-family: inherit;
         }
 
-        .list-item:hover {
-            background: rgba(0, 255, 0, 0.1);
+        .page-btn:disabled {
+            border-color: #004400;
+            color: #004400;
+            cursor: default;
         }
 
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 10px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #000;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #004400;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
+        .page-btn:hover:not(:disabled) {
             background: #00ff00;
+            color: #000;
         }
 
         /* BOUNTY STYLES */
@@ -764,6 +772,51 @@
             if (el) el.textContent = timeStr;
         }
 
+        // --- PAGINATION GLOBAL STATE ---
+        const PAGE_SIZE = 5;
+        const DATA_CACHE = { bounties: [], missions: [], market: [], intel: [], comms: [] };
+        const PAGINATION = { bounties: 0, missions: 0, market: 0, intel: 0, comms: 0 };
+
+        function changePage(type, delta) {
+            const list = DATA_CACHE[type];
+            if (!list) return;
+
+            const maxPage = Math.ceil(list.length / PAGE_SIZE) - 1;
+            let newPage = PAGINATION[type] + delta;
+
+            if (newPage < 0) newPage = 0;
+            if (newPage > maxPage) newPage = maxPage;
+
+            PAGINATION[type] = newPage;
+
+            // Re-render based on type
+            if (type === 'bounties') renderBounties();
+            if (type === 'missions') renderMissions();
+            if (type === 'market') renderMarket();
+            if (type === 'intel') renderIntel();
+            if (type === 'comms') renderComms();
+        }
+
+        function renderFooter(type) {
+            const list = DATA_CACHE[type];
+            if (!list) return '';
+
+            const total = list.length;
+            const current = PAGINATION[type];
+            const maxPage = Math.ceil(total / PAGE_SIZE) - 1;
+            const start = current * PAGE_SIZE + 1;
+            const end = Math.min((current + 1) * PAGE_SIZE, total);
+
+            if (total === 0) return '';
+
+            return `
+            <div class="pagination-controls">
+                <button class="page-btn" onclick="changePage('${type}', -1)" ${current === 0 ? 'disabled' : ''}>&lt; PREV</button>
+                <span style="color:#004400;">PAGE ${current + 1}/${maxPage + 1}</span>
+                <button class="page-btn" onclick="changePage('${type}', 1)" ${current >= maxPage ? 'disabled' : ''}>NEXT &gt;</button>
+            </div>`;
+        }
+
         // --- NAVIGATION SYSTEM ---
         function showView(viewId) {
             // Hide all views
@@ -783,7 +836,10 @@
 
         async function fetchAndRenderBounties() {
             const container = document.getElementById('list-bounty');
-            container.innerHTML = '<div style="padding:20px; text-align:center;">ACCESSING BOUNTY DATABASE...</div>';
+            // Check cache
+            if (!DATA_CACHE.bounties.length) {
+                container.innerHTML = '<div style="padding:20px; text-align:center;">ACCESSING BOUNTY DATABASE...</div>';
+            }
 
             const { data, error } = await supabaseClient
                 .from('bounties')
@@ -796,17 +852,26 @@
             }
 
             if (!data || data.length === 0) {
-                container.innerHTML = '<div style="padding:20px; text-align:center; color:#555;">NO ACTIVE BOUNTIES</div>';
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:#555;">NO RECORDS FOUND</div>';
                 return;
             }
 
-            renderBounties(data);
+            // Cache and Reset
+            DATA_CACHE.bounties = data;
+            PAGINATION.bounties = 0;
+            renderBounties();
         }
 
-        function renderBounties(list) {
+        function renderBounties() {
             const container = document.getElementById('list-bounty');
+            const list = DATA_CACHE.bounties;
+
+            const start = PAGINATION.bounties * PAGE_SIZE;
+            const end = start + PAGE_SIZE;
+            const pageItems = list.slice(start, end);
+
             let html = '';
-            list.forEach(b => {
+            pageItems.forEach(b => {
                 const color = b.status.includes('DEAD') ? '#ff4444' : (b.status.includes('CAPTURE') ? '#00ffff' : '#ffff00');
                 html += `
                 <div class="bounty-item">
@@ -829,12 +894,14 @@
                     </div>
                 </div>`;
             });
+
+            html += renderFooter('bounties');
             container.innerHTML = html;
         }
 
         async function fetchAndRenderMissions() {
             const container = document.getElementById('list-missions');
-            container.innerHTML = '<div style="padding:20px; text-align:center;">DECRYPTING MISSION FILES...</div>';
+            if (!DATA_CACHE.missions.length) container.innerHTML = '<div style="padding:20px; text-align:center;">DECRYPTING MISSION FILES...</div>';
 
             const { data, error } = await supabaseClient
                 .from('missions')
@@ -849,13 +916,21 @@
                 container.innerHTML = '<div style="padding:20px; text-align:center; color:#555;">NO ACTIVE CONTRACTS</div>';
                 return;
             }
-            renderMissions(data);
+
+            DATA_CACHE.missions = data;
+            PAGINATION.missions = 0;
+            renderMissions();
         }
 
-        function renderMissions(list) {
+        function renderMissions() {
             const container = document.getElementById('list-missions');
+            const list = DATA_CACHE.missions;
+            const start = PAGINATION.missions * PAGE_SIZE;
+            const end = start + PAGE_SIZE;
+            const pageItems = list.slice(start, end);
+
             let html = '';
-            list.forEach(m => {
+            pageItems.forEach(m => {
                 html += `
                  <div class="mission-item">
                     <div class="mission-header">
@@ -866,13 +941,14 @@
                     <div style="font-size:12px; color:#00aaaa;">DIFFICULTY: ${m.difficulty || 'N/A'} | <span style="text-decoration:underline; cursor:pointer;">ACCEPT</span></div>
                  </div>`;
             });
+            html += renderFooter('missions');
             container.innerHTML = html;
         }
 
 
         async function fetchAndRenderMarket() {
             const container = document.getElementById('list-market');
-            container.innerHTML = '<div style="padding:20px; text-align:center;">ESTABLISHING UPLINK...</div>';
+            if (!DATA_CACHE.market.length) container.innerHTML = '<div style="padding:20px; text-align:center;">ESTABLISHING UPLINK...</div>';
 
             const { data, error } = await supabaseClient.from('market_items').select('*').order('name');
             if (error) {
@@ -883,13 +959,21 @@
                 container.innerHTML = '<div style="padding:20px; text-align:center; color:#555;">MARKET OFFLINE</div>';
                 return;
             }
-            renderMarket(data);
+
+            DATA_CACHE.market = data;
+            PAGINATION.market = 0;
+            renderMarket();
         }
 
-        function renderMarket(list) {
+        function renderMarket() {
             const container = document.getElementById('list-market');
+            const list = DATA_CACHE.market;
+            const start = PAGINATION.market * PAGE_SIZE;
+            const end = start + PAGE_SIZE;
+            const pageItems = list.slice(start, end);
+
             let html = '';
-            list.forEach(m => {
+            pageItems.forEach(m => {
                 html += `
                  <div class="market-item">
                     <div>
@@ -899,25 +983,34 @@
                     <div class="market-price">${(m.price || 0).toLocaleString()} CR</div>
                  </div>`;
             });
+            html += renderFooter('market');
             container.innerHTML = html;
         }
 
         async function fetchAndRenderIntel() {
             const container = document.getElementById('list-intel');
-            container.innerHTML = '<div style="padding:20px; text-align:center;">DOWNLOADING PACKETS...</div>';
+            if (!DATA_CACHE.intel.length) container.innerHTML = '<div style="padding:20px; text-align:center;">DOWNLOADING PACKETS...</div>';
 
             const { data, error } = await supabaseClient.from('intel_reports').select('*').order('created_at', { ascending: false });
             if (!data || data.length === 0) {
                 container.innerHTML = '<div style="padding:20px; text-align:center; color:#555;">NO NEW REPORTS</div>';
                 return;
             }
-            renderIntel(data);
+
+            DATA_CACHE.intel = data;
+            PAGINATION.intel = 0;
+            renderIntel();
         }
 
-        function renderIntel(list) {
+        function renderIntel() {
             const container = document.getElementById('list-intel');
+            const list = DATA_CACHE.intel;
+            const start = PAGINATION.intel * PAGE_SIZE;
+            const end = start + PAGE_SIZE;
+            const pageItems = list.slice(start, end);
+
             let html = '';
-            list.forEach(i => {
+            pageItems.forEach(i => {
                 const dateStr = new Date(i.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 html += `
                  <div class="intel-item">
@@ -926,12 +1019,13 @@
                     <div class="intel-body">${i.body || ''}</div>
                  </div>`;
             });
+            html += renderFooter('intel');
             container.innerHTML = html;
         }
 
         async function fetchAndRenderComms() {
             const container = document.getElementById('list-comms');
-            container.innerHTML = '<div style="padding:20px; text-align:center;">SCANNING...</div>';
+            if (!DATA_CACHE.comms.length) container.innerHTML = '<div style="padding:20px; text-align:center;">SCANNING...</div>';
 
             // In a real app we'd filter by recipient_tag_id. For now show all or filter if user is logged in
             let query = supabaseClient.from('secure_messages').select('*').order('created_at', { ascending: false });
@@ -944,13 +1038,21 @@
                 container.innerHTML = '<div style="padding:20px; text-align:center; color:#555;">INBOX EMPTY</div>';
                 return;
             }
-            renderComms(data);
+
+            DATA_CACHE.comms = data;
+            PAGINATION.comms = 0;
+            renderComms();
         }
 
-        function renderComms(list) {
+        function renderComms() {
             const container = document.getElementById('list-comms');
+            const list = DATA_CACHE.comms;
+            const start = PAGINATION.comms * PAGE_SIZE;
+            const end = start + PAGE_SIZE;
+            const pageItems = list.slice(start, end);
+
             let html = '';
-            list.forEach(c => {
+            pageItems.forEach(c => {
                 const dateStr = new Date(c.created_at).toLocaleDateString();
                 html += `
                  <div class="comm-item">
@@ -962,6 +1064,7 @@
                     ${c.is_encrypted ? '<div class="comm-encrypted">[ENCRYPTED MESSAGE - KEY REQUIRED]</div>' : ''}
                  </div>`;
             });
+            html += renderFooter('comms');
             container.innerHTML = html;
         }
 
